@@ -157,6 +157,30 @@ audio {
   width: 180px;
 }
 
+.asr_requirements {
+  background: #f8fafc;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 14px;
+  margin: 18px 0;
+  color: #0f172a; /* readable on light background */
+}
+
+.asr_requirements img {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+}
+
+.asr_requirements .image-credit {
+  text-align: right;
+  font-size: 0.85rem;
+  color: #475569;
+  margin-top: 6px;
+  font-style: italic;
+}
+
 
 </style>
 
@@ -219,6 +243,11 @@ audio {
   </div>
 </section>
 
+<section class="asr_requirements">
+  <img src="assets/images/domain_asr_requirements.png"
+       alt="Infographic: We need lab-noise audio recordings and example lab sentences filled in the form">
+  <p class="image-credit">AI-generated illustration (OpenAI)</p>
+</section>
 
 
   <h1>Audio Submission</h1>
@@ -257,6 +286,20 @@ audio {
       <option value="yes">I consent to storing and using my audio for this project. Note that the data will not be shared </option>
       <option value="no">I do not consent</option>
     </select>
+
+
+    <h3>Example sentences (optional, but very helpful)</h3>
+    <p class="small">Please provide a few lab-related sentences you might say during catalyst synthesis.</p>
+
+    <label for="s1">Sentence 1</label>
+    <input id="s1" type="text" placeholder="e.g., Add 10 grams of sodium borohydride." />
+
+    <label for="s2">Sentence 2</label>
+    <input id="s2" type="text" placeholder="e.g., Increase stirring speed to 400 rpm." />
+
+    <label for="s3">Sentence 3</label>
+    <input id="s3" type="text" placeholder="e.g., Heat the mixture to 80°C for 30 minutes." />
+
 
     <p class="small">
       Your submission ID: <code id="sid">—</code><br/>
@@ -298,26 +341,37 @@ audio {
   function makeId() {
     const d = new Date();
     const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const day = String(d.getDate()).padStart(2,'0');
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
     const rand = Math.random().toString(16).slice(2, 8).toUpperCase();
     return `FAU-${y}${m}${day}-${rand}`;
+  }
+
+  // CSV-safe escaping (wrap in quotes, escape quotes by doubling)
+  function csvEsc(v) {
+    return `"${String(v ?? "").replaceAll('"', '""')}"`;
   }
 
   const sid = makeId();
   const sidEl = document.getElementById('sid');
   const fnameEl = document.getElementById('fname');
+
   sidEl.textContent = sid;
   fnameEl.textContent = `${sid}.wav`;
 
   document.getElementById('downloadBtn').addEventListener('click', () => {
     const email = document.getElementById('email').value.trim();
-    const occupation = document.getElementById('occupation').value.trim();
+    const occupation = document.getElementById('occupation').value; // select
     const university = document.getElementById('university').value.trim();
     const consent = document.getElementById('consent').value;
 
+    // NEW: sentence fields (make sure you have inputs with these ids)
+    const s1 = document.getElementById('s1')?.value.trim() || "";
+    const s2 = document.getElementById('s2')?.value.trim() || "";
+    const s3 = document.getElementById('s3')?.value.trim() || "";
+
     if (!email || !occupation || !university || !consent) {
-      alert('Please fill all fields and select consent.');
+      alert('Please fill all required fields and select consent.');
       return;
     }
     if (consent !== 'yes') {
@@ -325,9 +379,23 @@ audio {
       return;
     }
 
-    const header = "submission_id,email,occupation,university,consent,timestamp\n";
     const ts = new Date().toISOString();
-    const row = `${sid},"${email.replaceAll('"','""')}","${occupation.replaceAll('"','""')}","${university.replaceAll('"','""')}",yes,${ts}\n`;
+
+    const header =
+      "submission_id,email,occupation,university,consent,sentence1,sentence2,sentence3,timestamp\n";
+
+    const row = [
+      sid,
+      csvEsc(email),
+      csvEsc(occupation),
+      csvEsc(university),
+      "yes",
+      csvEsc(s1),
+      csvEsc(s2),
+      csvEsc(s3),
+      ts
+    ].join(",") + "\n";
+
     const csv = header + row;
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -343,5 +411,8 @@ audio {
     URL.revokeObjectURL(url);
   });
 </script>
+
+
+  
 </body>
 </html>
